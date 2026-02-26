@@ -1,5 +1,4 @@
-# Anemo Compiler
-
+# Anemo
 ![Anemo Logo](installer/anemo-logo.png)
 
 Anemo is a compiled programming language with `.anm` source files.
