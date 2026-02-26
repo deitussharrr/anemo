@@ -1,0 +1,14 @@
+glyph is_even [n: ember] yields pulse
+bind half = n / 2
+offer half * 2 same n
+seal
+
+glyph main [] yields ember
+bind v = 7
+fork invoke is_even with v
+chant "even"
+otherwise
+chant "odd"
+seal
+offer 0
+seal

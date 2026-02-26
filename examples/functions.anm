@@ -1,0 +1,15 @@
+glyph fib [n: ember] yields ember
+fork n atmost 1
+offer n
+otherwise
+offer invoke fib with n - 1 + invoke fib with n - 2
+seal
+seal
+
+glyph main [] yields ember
+bind n = 8
+bind f = invoke fib with n
+chant "fib"
+chant f
+offer 0
+seal

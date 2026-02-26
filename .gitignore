@@ -1,0 +1,19 @@
+# Binaries and objects
+*.exe
+*.o
+*.obj
+*.s
+
+# Build output folders
+built/
+
+# MSI packaging artifacts
+*.msi
+*.wixpdb
+installer/*.log
+installer/wizard-banner.bmp
+installer/wizard-dialog.bmp
+
+# Local scratch/temp files
+__t.c
+*.tmp

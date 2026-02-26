@@ -1,0 +1,10 @@
+glyph add [a: ember, b: ember] yields ember
+offer a + b
+seal
+
+glyph main [] yields ember
+bind x = invoke add with 11, 31
+chant "sum"
+chant x
+offer 0
+seal

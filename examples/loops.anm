@@ -1,0 +1,11 @@
+glyph main [] yields ember
+morph i = 5
+morph acc = 0
+cycle i more 0
+shift acc = acc + i
+shift i = i - 1
+seal
+chant "countdown sum"
+chant acc
+offer 0
+seal

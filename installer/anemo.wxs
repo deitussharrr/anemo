@@ -1,0 +1,88 @@
+<Wix xmlns="http://wixtoolset.org/schemas/v4/wxs"
+     xmlns:ui="http://wixtoolset.org/schemas/v4/wxs/ui">
+  <Package Name="Anemo Compiler"
+           Manufacturer="Anemo"
+           Version="$(var.ProductVersion)"
+           UpgradeCode="F567B188-B005-4708-AB85-6A06A578F653"
+           Language="1033"
+           Scope="perMachine">
+    <Icon Id="AnemoProductIcon" SourceFile="$(var.SourceDir)\\installer\\anemo-logo.ico" />
+    <Property Id="ARPPRODUCTICON" Value="AnemoProductIcon" />
+    <Property Id="ARPCOMMENTS" Value="Anemo programming language compiler and toolchain." />
+    <Property Id="ARPURLINFOABOUT" Value="https://example.com/anemo" />
+    <MajorUpgrade DowngradeErrorMessage="A newer version of Anemo is already installed." />
+    <MediaTemplate EmbedCab="yes" />
+    <WixVariable Id="WixUILicenseRtf" Value="$(var.SourceDir)\\installer\\EULA.rtf" />
+    <WixVariable Id="WixUIBannerBmp" Value="$(var.SourceDir)\\installer\\wizard-banner.bmp" />
+    <WixVariable Id="WixUIDialogBmp" Value="$(var.SourceDir)\\installer\\wizard-dialog.bmp" />
+    <ui:WixUI Id="WixUI_InstallDir" InstallDirectory="INSTALLFOLDER" />
+
+    <Feature Id="MainFeature" Title="Anemo Compiler" Level="1">
+      <ComponentGroupRef Id="ProductComponents" />
+    </Feature>
+  </Package>
+
+  <Fragment>
+    <StandardDirectory Id="ProgramFiles64Folder">
+      <Directory Id="INSTALLFOLDER" Name="Anemo">
+        <Component Id="cmpAnemoExe" Guid="6B8C7A8B-D0D7-4AA6-8EFB-9D49E5C114A3">
+          <File Id="filAnemoExe" Source="$(var.SourceDir)\\anemo.exe" KeyPath="yes" />
+        </Component>
+
+        <Component Id="cmpEulaTxt" Guid="15B9AF84-3EF3-4DDF-8199-9908999E390A">
+          <File Id="filEulaTxt" Source="$(var.SourceDir)\\installer\\EULA.txt" KeyPath="yes" />
+        </Component>
+
+        <Component Id="cmpBrandAssets" Guid="23AE41AB-5D68-46F8-B554-35E1015851B3">
+          <File Id="filAnemoLogoPng" Source="$(var.SourceDir)\\installer\\anemo-logo.png" KeyPath="yes" />
+          <File Id="filAnemoLogoIco" Source="$(var.SourceDir)\\installer\\anemo-logo.ico" />
+        </Component>
+
+        <Component Id="cmpPath" Guid="CF9960D8-16A6-4C78-A37E-A740614BB4C0">
+          <RegistryValue Root="HKLM"
+                         Key="Software\\Anemo"
+                         Name="Installed"
+                         Type="integer"
+                         Value="1"
+                         KeyPath="yes" />
+          <Environment Id="envPath"
+                       Name="PATH"
+                       Value="[INSTALLFOLDER]"
+                       Part="last"
+                       Action="set"
+                       System="yes" />
+        </Component>
+      </Directory>
+    </StandardDirectory>
+
+    <StandardDirectory Id="ProgramMenuFolder">
+      <Directory Id="AnemoProgramMenuFolder" Name="Anemo">
+        <Component Id="cmpStartMenuShortcut" Guid="B2D4895A-B314-467B-A3C9-46F5AFC3A745">
+          <Shortcut Id="scAnemo"
+                    Name="Anemo Compiler"
+                    Description="Anemo programming language compiler"
+                    Target="[INSTALLFOLDER]anemo.exe"
+                    WorkingDirectory="INSTALLFOLDER"
+                    Icon="AnemoProductIcon" />
+          <RemoveFolder Id="rmAnemoProgramMenuFolder" On="uninstall" />
+          <RegistryValue Root="HKLM"
+                         Key="Software\\Anemo"
+                         Name="StartMenuShortcut"
+                         Type="integer"
+                         Value="1"
+                         KeyPath="yes" />
+        </Component>
+      </Directory>
+    </StandardDirectory>
+  </Fragment>
+
+  <Fragment>
+    <ComponentGroup Id="ProductComponents">
+      <ComponentRef Id="cmpAnemoExe" />
+      <ComponentRef Id="cmpEulaTxt" />
+      <ComponentRef Id="cmpBrandAssets" />
+      <ComponentRef Id="cmpPath" />
+      <ComponentRef Id="cmpStartMenuShortcut" />
+    </ComponentGroup>
+  </Fragment>
+</Wix>
