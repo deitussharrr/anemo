@@ -4,13 +4,14 @@
 #include "lexer.h"
 #include "parser.h"
 #include "semantic.h"
+#include "update.h"
 #include "utils.h"
 
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
-#define ANEMO_VERSION "0.1.0"
+#define ANEMO_VERSION "0.2.0"
 
 static void print_ascii_art(void) {
     fputs(
@@ -63,6 +64,7 @@ static void usage(void) {
             "anemo build <file.anm>\n"
             "anemo run <file.anm>\n"
             "anemo vortex\n"
+            "anemo update\n"
             "anemo version\n");
 }
 
@@ -375,6 +377,8 @@ static void compile_source(const char *input_path, const char *binary_out) {
 }
 
 int main(int argc, char **argv) {
+    anemo_auto_check_for_updates(ANEMO_VERSION);
+
     if (argc < 2) {
         print_ascii_art();
         usage();
@@ -391,6 +395,10 @@ int main(int argc, char **argv) {
         return 0;
     }
 
+    if (strcmp(argv[1], "update") == 0) {
+        return anemo_run_update(ANEMO_VERSION);
+    }
+
     if ((strcmp(argv[1], "build") == 0 || strcmp(argv[1], "run") == 0) && argc == 3) {
         const char *src = argv[2];
         char *stem = path_stem(src);
@@ -401,7 +409,11 @@ int main(int argc, char **argv) {
             printf("built: %s\n", stem);
         } else {
             char cmd_run[1024];
+#ifdef _WIN32
+            snprintf(cmd_run, sizeof(cmd_run), ".\\%s", stem);
+#else
             snprintf(cmd_run, sizeof(cmd_run), "./%s", stem);
+#endif
             int rc = system(cmd_run);
             if (rc != 0) {
                 free(stem);

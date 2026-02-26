@@ -26,7 +26,19 @@ typedef struct IRBuilder {
     int depth;
     int next_temp;
     int next_label;
+
+    int loop_head_stack[128];
+    int loop_end_stack[128];
+    int loop_depth;
 } IRBuilder;
+
+static int max_call_args(void) {
+#ifdef _WIN32
+    return 4;
+#else
+    return 6;
+#endif
+}
 
 static void grow(void **items, size_t *cap, size_t elem_size) {
     size_t next = *cap == 0 ? 8 : *cap * 2;
@@ -140,8 +152,8 @@ static void emit_store_var(IRBuilder *b, int var_index, int src, int line, int c
 
 static int gen_call(IRBuilder *b, const Expr *e) {
     int arg_temps[6];
-    if (e->as.call.args.len > 6) {
-        fatal_at("<internal>", e->line, e->col, "codegen currently supports up to 6 call arguments");
+    if (e->as.call.args.len > (size_t)max_call_args()) {
+        fatal_at("<internal>", e->line, e->col, "codegen currently supports up to %d call arguments on this target", max_call_args());
     }
     for (size_t i = 0; i < e->as.call.args.len; i++) {
         arg_temps[i] = gen_expr(b, e->as.call.args.items[i]);
@@ -336,6 +348,13 @@ static void gen_stmt(IRBuilder *b, const Stmt *s) {
         case STMT_CYCLE: {
             int l_head = new_label(b);
             int l_end = new_label(b);
+            if (b->loop_depth >= 128) {
+                fatal_at("<internal>", s->line, s->col, "loop nesting too deep");
+            }
+            b->loop_head_stack[b->loop_depth] = l_head;
+            b->loop_end_stack[b->loop_depth] = l_end;
+            b->loop_depth++;
+
             emit_label(b, l_head);
             int cond = gen_expr(b, s->as.cycle.cond);
             emit_jmp_false(b, cond, l_end);
@@ -345,6 +364,21 @@ static void gen_stmt(IRBuilder *b, const Stmt *s) {
             end_scope(b);
             emit_jmp(b, l_head);
             emit_label(b, l_end);
+            b->loop_depth--;
+            break;
+        }
+        case STMT_BREAK: {
+            if (b->loop_depth <= 0) {
+                fatal_at("<internal>", s->line, s->col, "break used outside loop during IR gen");
+            }
+            emit_jmp(b, b->loop_end_stack[b->loop_depth - 1]);
+            break;
+        }
+        case STMT_CONTINUE: {
+            if (b->loop_depth <= 0) {
+                fatal_at("<internal>", s->line, s->col, "continue used outside loop during IR gen");
+            }
+            emit_jmp(b, b->loop_head_stack[b->loop_depth - 1]);
             break;
         }
         case STMT_OFFER: {
@@ -389,6 +423,7 @@ static void gen_function(IRBuilder *b, const Function *f) {
     b->depth = 0;
     b->next_temp = 0;
     b->next_label = 0;
+    b->loop_depth = 0;
 
     begin_scope(b);
     for (size_t i = 0; i < f->params.len; i++) {

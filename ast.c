@@ -132,6 +132,9 @@ static void free_stmt(Stmt *stmt) {
             free_expr(stmt->as.cycle.cond);
             free_block(stmt->as.cycle.body);
             break;
+        case STMT_BREAK:
+        case STMT_CONTINUE:
+            break;
         case STMT_OFFER:
             free_expr(stmt->as.offer.value);
             break;

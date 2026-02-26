@@ -1,0 +1,6 @@
+glyph main [] yields ember
+chant "A\nB"
+chant "tab:\tX"
+chant "hex:\x41"
+offer 0
+seal

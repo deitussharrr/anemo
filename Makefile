@@ -1,7 +1,7 @@
 CC = gcc
 CFLAGS = -std=c17 -Wall -Wextra -Werror -O2
 
-OBJS = main.o lexer.o parser.o ast.o semantic.o ir.o codegen.o utils.o
+OBJS = main.o lexer.o parser.o ast.o semantic.o ir.o codegen.o utils.o update.o
 
 all: anemo
 
@@ -16,6 +16,7 @@ semantic.o: semantic.c semantic.h ast.h utils.h
 ir.o: ir.c ir.h ast.h utils.h
 codegen.o: codegen.c codegen.h ir.h utils.h
 utils.o: utils.c utils.h
+update.o: update.c update.h utils.h
 
 clean:
 	rm -f $(OBJS) anemo

@@ -83,6 +83,8 @@ typedef enum StmtKind {
     STMT_SHIFT,
     STMT_FORK,
     STMT_CYCLE,
+    STMT_BREAK,
+    STMT_CONTINUE,
     STMT_OFFER,
     STMT_CHANT,
     STMT_EXPR

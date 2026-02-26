@@ -35,7 +35,16 @@ typedef struct Checker {
 
     FnSym *current_fn;
     int saw_offer;
+    int loop_depth;
 } Checker;
+
+static int max_call_args(void) {
+#ifdef _WIN32
+    return 4;
+#else
+    return 6;
+#endif
+}
 
 static void fn_push(Checker *c, FnSym fn) {
     if (c->fn_len == c->fn_cap) {
@@ -116,6 +125,10 @@ static TypeKind check_call(Checker *c, Expr *e) {
     FnSym *fn = find_fn(c, e->as.call.name);
     if (!fn) {
         fatal_at(c->file, e->line, e->col, "unknown glyph '%s'", e->as.call.name);
+    }
+
+    if (e->as.call.args.len > (size_t)max_call_args()) {
+        fatal_at(c->file, e->line, e->col, "glyph calls currently support at most %d arguments on this target", max_call_args());
     }
 
     if (fn->params.len != e->as.call.args.len) {
@@ -271,9 +284,23 @@ static void check_stmt(Checker *c, Stmt *s) {
             if (cond != TYPE_BOOL) {
                 fatal_at(c->file, s->line, s->col, "cycle condition must be pulse");
             }
+            c->loop_depth++;
             begin_scope(c);
             check_block(c, s->as.cycle.body);
             end_scope(c);
+            c->loop_depth--;
+            break;
+        }
+        case STMT_BREAK: {
+            if (c->loop_depth <= 0) {
+                fatal_at(c->file, s->line, s->col, "break can only be used inside cycle");
+            }
+            break;
+        }
+        case STMT_CONTINUE: {
+            if (c->loop_depth <= 0) {
+                fatal_at(c->file, s->line, s->col, "continue can only be used inside cycle");
+            }
             break;
         }
         case STMT_OFFER: {
@@ -336,6 +363,7 @@ static void check_function(Checker *c, Function *f) {
     c->depth = 0;
     c->current_fn = find_fn(c, f->name);
     c->saw_offer = 0;
+    c->loop_depth = 0;
 
     begin_scope(c);
     for (size_t i = 0; i < f->params.len; i++) {

@@ -39,6 +39,11 @@ Supported string escapes:
 - `\n`
 - `\t`
 - `\r`
+- `\0`
+- `\b`
+- `\f`
+- `\v`
+- `\xNN` (two-digit hexadecimal byte)
 - `\"`
 - `\\`
 
@@ -54,7 +59,7 @@ Supported string escapes:
 Control/definitions:
 
 - `glyph`, `yields`, `bind`, `morph`, `shift`
-- `fork`, `otherwise`, `cycle`, `offer`, `seal`
+- `fork`, `elseif`, `otherwise`, `cycle`, `break`, `continue`, `offer`, `seal`
 - `invoke`, `with`, `chant`
 
 Type/literal keywords:
@@ -96,6 +101,7 @@ shift_stmt      ::= "shift" IDENT "=" expr line_end
 
 fork_stmt       ::= "fork" expr nl+
                     block
+                    { "elseif" expr nl+ block }
                     [ "otherwise" nl+ block ]
                     "seal" line_end
 
@@ -103,6 +109,8 @@ cycle_stmt      ::= "cycle" expr nl+
                     block
                     "seal" line_end
 
+break_stmt      ::= "break" line_end
+continue_stmt   ::= "continue" line_end
 offer_stmt      ::= "offer" [ expr ] line_end
 chant_stmt      ::= "chant" expr line_end
 expr_stmt       ::= expr line_end
@@ -132,14 +140,19 @@ primary         ::= INT
                   | "no"
                   | IDENT
                   | call_expr
+                  | direct_call_expr
+                  | "(" expr ")"
 
 call_expr       ::= "invoke" IDENT [ "with" expr { "," expr } ]
+direct_call_expr::= IDENT "(" [ expr { "," expr } ] ")"
 ```
 
 Notes:
 
-- There are currently no grouping parentheses in expressions.
-- Call syntax is keyword-based (`invoke ... with ...`), not `name(...)`.
+- Grouping parentheses are supported in expressions.
+- Both call styles are supported:
+  - `invoke add with 1, 2`
+  - `add(1, 2)`
 
 ## 6. Statements
 
@@ -298,6 +311,24 @@ offer 0
 seal
 ```
 
+### 10.2b Else-if chains (`elseif`)
+
+```anm
+glyph main [] yields ember
+bind score = 72
+fork score more 89
+chant "A"
+elseif score more 79
+chant "B"
+elseif score more 69
+chant "C"
+otherwise
+chant "D"
+seal
+offer 0
+seal
+```
+
 ### 10.3 Loops (`cycle`)
 
 ```anm
@@ -306,6 +337,25 @@ morph n = 5
 cycle n more 0
 chant n
 shift n = n - 1
+seal
+offer 0
+seal
+```
+
+### 10.3b Loop control (`break`, `continue`)
+
+```anm
+glyph main [] yields ember
+morph i = 0
+cycle i less 10
+shift i = i + 1
+fork i same 2
+continue
+elseif i same 5
+break
+otherwise
+chant i
+seal
 seal
 offer 0
 seal
@@ -348,6 +398,16 @@ bind b = 20
 chant a less b
 chant a same b
 chant a diff b
+offer 0
+seal
+```
+
+### 10.6b Grouped expressions (`(` `)`)
+
+```anm
+glyph main [] yields ember
+bind x = (3 + 4) * 2
+chant x
 offer 0
 seal
 ```

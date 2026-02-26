@@ -1,0 +1,14 @@
+glyph main [] yields ember
+morph i = 0
+cycle i less 10
+shift i = i + 1
+fork (i same 2)
+continue
+elseif (i same 5)
+break
+otherwise
+chant i
+seal
+seal
+offer 0
+seal

@@ -19,10 +19,26 @@ This project implements a full C17 compiler pipeline that emits x86-64 Linux ass
 ./anemo build program.anm
 ./anemo run program.anm
 ./anemo vortex
+./anemo update
 ./anemo version
 ```
 
 Running `anemo` with no arguments prints ASCII art and shows available commands.
+
+## OTA Updates
+
+- Anemo automatically checks GitHub releases for updates (once per day by default).
+- Manual update command:
+
+```bash
+./anemo update
+```
+
+Environment variables:
+
+- `ANEMO_GITHUB_REPO` (default: `tussh/anemo`)  
+  Example: `owner/repo`
+- `ANEMO_DISABLE_UPDATE_CHECK=1` to disable automatic checks
 
 ## Build
 
@@ -45,9 +61,12 @@ gcc -std=c17 -Wall -Wextra -Werror -Wno-error=format-truncation -O2 -o anemo.exe
 - Reassignment (mutable only): `shift`
 - Function definition: `glyph`
 - Function return: `offer`
-- Conditional: `fork` / `otherwise` / `seal`
-- Loop: `cycle` / `seal`
-- Function call expression: `invoke <name> with <arg1>, <arg2>`
+- Conditional: `fork` / `elseif` / `otherwise` / `seal`
+- Loop: `cycle` / `break` / `continue` / `seal`
+- Function call expressions:
+  - `invoke <name> with <arg1>, <arg2>`
+  - `<name>(<arg1>, <arg2>)`
+- Grouping: `(` `)`
 - Print statement: `chant <expr>`
 
 Types:

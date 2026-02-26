@@ -5,9 +5,29 @@
 #include <stdio.h>
 #include <string.h>
 
+static const char *printf_symbol(void) {
+#ifdef _WIN32
+    return "printf";
+#else
+    return "printf@PLT";
+#endif
+}
+
 static const char *arg_reg64(int i) {
+#ifdef _WIN32
+    static const char *regs[] = {"%rcx", "%rdx", "%r8", "%r9"};
+#else
     static const char *regs[] = {"%rdi", "%rsi", "%rdx", "%rcx", "%r8", "%r9"};
+#endif
     return regs[i];
+}
+
+static int max_call_args(void) {
+#ifdef _WIN32
+    return 4;
+#else
+    return 6;
+#endif
 }
 
 static const char *label_for_fn(const char *name) {
@@ -162,16 +182,43 @@ static void emit_unop(FILE *out, const IRFunction *fn, const IRInstr *in) {
 static void emit_chant(FILE *out, const IRFunction *fn, const IRInstr *in) {
     load_temp(out, fn, in->src1, "%rax");
 
+#ifdef _WIN32
+    if (in->type == TYPE_INT) {
+        fprintf(out, "  movq %%rax, %%rdx\n");
+        fprintf(out, "  leaq .LC_fmt_int(%%rip), %%rcx\n");
+        fprintf(out, "  xor %%eax, %%eax\n");
+        fprintf(out, "  subq $32, %%rsp\n");
+        fprintf(out, "  call %s\n", printf_symbol());
+        fprintf(out, "  addq $32, %%rsp\n");
+    } else if (in->type == TYPE_STRING) {
+        fprintf(out, "  movq %%rax, %%rdx\n");
+        fprintf(out, "  leaq .LC_fmt_str(%%rip), %%rcx\n");
+        fprintf(out, "  xor %%eax, %%eax\n");
+        fprintf(out, "  subq $32, %%rsp\n");
+        fprintf(out, "  call %s\n", printf_symbol());
+        fprintf(out, "  addq $32, %%rsp\n");
+    } else {
+        fprintf(out, "  cmpq $0, %%rax\n");
+        fprintf(out, "  leaq .LC_bool_no(%%rip), %%rdx\n");
+        fprintf(out, "  leaq .LC_bool_yes(%%rip), %%r8\n");
+        fprintf(out, "  cmovne %%r8, %%rdx\n");
+        fprintf(out, "  leaq .LC_fmt_str(%%rip), %%rcx\n");
+        fprintf(out, "  xor %%eax, %%eax\n");
+        fprintf(out, "  subq $32, %%rsp\n");
+        fprintf(out, "  call %s\n", printf_symbol());
+        fprintf(out, "  addq $32, %%rsp\n");
+    }
+#else
     if (in->type == TYPE_INT) {
         fprintf(out, "  movq %%rax, %%rsi\n");
         fprintf(out, "  leaq .LC_fmt_int(%%rip), %%rdi\n");
         fprintf(out, "  xor %%eax, %%eax\n");
-        fprintf(out, "  call printf@PLT\n");
+        fprintf(out, "  call %s\n", printf_symbol());
     } else if (in->type == TYPE_STRING) {
         fprintf(out, "  movq %%rax, %%rsi\n");
         fprintf(out, "  leaq .LC_fmt_str(%%rip), %%rdi\n");
         fprintf(out, "  xor %%eax, %%eax\n");
-        fprintf(out, "  call printf@PLT\n");
+        fprintf(out, "  call %s\n", printf_symbol());
     } else {
         fprintf(out, "  cmpq $0, %%rax\n");
         fprintf(out, "  leaq .LC_bool_no(%%rip), %%rsi\n");
@@ -179,8 +226,9 @@ static void emit_chant(FILE *out, const IRFunction *fn, const IRInstr *in) {
         fprintf(out, "  cmovne %%rdx, %%rsi\n");
         fprintf(out, "  leaq .LC_fmt_str(%%rip), %%rdi\n");
         fprintf(out, "  xor %%eax, %%eax\n");
-        fprintf(out, "  call printf@PLT\n");
+        fprintf(out, "  call %s\n", printf_symbol());
     }
+#endif
 }
 
 static void emit_function(FILE *out, const IRFunction *fn) {
@@ -201,8 +249,8 @@ static void emit_function(FILE *out, const IRFunction *fn) {
         fprintf(out, "  subq $%d, %%rsp\n", stack_size);
     }
 
-    if (fn->param_count > 6) {
-        fatal("codegen supports at most 6 parameters");
+    if (fn->param_count > max_call_args()) {
+        fatal("codegen supports at most %d parameters on this target", max_call_args());
     }
     for (int i = 0; i < fn->param_count; i++) {
         int off = stack_slot_offset(i);
@@ -253,13 +301,15 @@ static void emit_function(FILE *out, const IRFunction *fn) {
                 emit_unop(out, fn, in);
                 break;
             case IROP_CALL: {
-                if (in->argc > 6) {
-                    fatal("codegen supports at most 6 call arguments");
+                if (in->argc > max_call_args()) {
+                    fatal("codegen supports at most %d call arguments on this target", max_call_args());
                 }
                 for (int a = 0; a < in->argc; a++) {
                     load_temp(out, fn, in->args[a], arg_reg64(a));
                 }
+                fprintf(out, "  subq $32, %%rsp\n");
                 fprintf(out, "  call %s\n", label_for_fn(in->name));
+                fprintf(out, "  addq $32, %%rsp\n");
                 if (in->dst >= 0) {
                     store_temp(out, fn, in->dst, "%rax");
                 }

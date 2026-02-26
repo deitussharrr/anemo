@@ -10,7 +10,7 @@ Add-Type -AssemblyName System.Drawing
 if ([string]::IsNullOrWhiteSpace($Version)) {
     $now = Get-Date
     $minuteOfDay = ($now.Hour * 60) + $now.Minute
-    $Version = "0.1.$($now.DayOfYear).$minuteOfDay"
+    $Version = "0.2.$($now.DayOfYear).$minuteOfDay"
 }
 
 if ([string]::IsNullOrWhiteSpace($OutputMsi)) {

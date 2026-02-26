@@ -31,7 +31,7 @@ Output is created under:
 You can still override version/source/output:
 
 ```powershell
-.\installer\build-msi.ps1 -Version 0.1.0 -SourceDir . -OutputMsi .\built\0.1.0\anemo-0.1.0.msi
+.\installer\build-msi.ps1 -Version 0.2.0 -SourceDir . -OutputMsi .\built\0.2.0\anemo-0.2.0.msi
 ```
 
 ## Install

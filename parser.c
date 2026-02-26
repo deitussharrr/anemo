@@ -66,7 +66,7 @@ static TypeKind parse_type(Parser *p) {
 }
 
 static Expr *parse_expr(Parser *p);
-static Block *parse_block_until(Parser *p, TokenKind end_a, TokenKind end_b);
+static Block *parse_block_until_any(Parser *p, TokenKind end_a, TokenKind end_b, TokenKind end_c);
 
 static Expr *parse_call(Parser *p) {
     const Token *kw = expect(p, TOK_K_INVOKE, "expected invoke");
@@ -82,6 +82,21 @@ static Expr *parse_call(Parser *p) {
             expr_array_push(&call->as.call.args, parse_expr(p));
         }
     }
+    return call;
+}
+
+static Expr *parse_direct_call(Parser *p, const Token *name_tok) {
+    Expr *call = expr_new(EXPR_CALL, name_tok->line, name_tok->col);
+    call->as.call.name = xstrdup(name_tok->lexeme);
+
+    expect(p, TOK_LPAREN, "expected '(' after function name");
+    if (!check(p, TOK_RPAREN)) {
+        expr_array_push(&call->as.call.args, parse_expr(p));
+        while (match(p, TOK_COMMA)) {
+            expr_array_push(&call->as.call.args, parse_expr(p));
+        }
+    }
+    expect(p, TOK_RPAREN, "expected ')' after call arguments");
     return call;
 }
 
@@ -111,7 +126,15 @@ static Expr *parse_primary(Parser *p) {
     if (check(p, TOK_K_INVOKE)) {
         return parse_call(p);
     }
+    if (match(p, TOK_LPAREN)) {
+        Expr *inner = parse_expr(p);
+        expect(p, TOK_RPAREN, "expected ')' to close grouped expression");
+        return inner;
+    }
     if (match(p, TOK_IDENT)) {
+        if (check(p, TOK_LPAREN)) {
+            return parse_direct_call(p, t);
+        }
         Expr *e = expr_new(EXPR_VAR, t->line, t->col);
         e->as.var_name = xstrdup(t->lexeme);
         return e;
@@ -284,11 +307,30 @@ static Stmt *parse_stmt(Parser *p) {
         s->as.fork.cond = parse_expr(p);
         expect(p, TOK_NEWLINE, "expected newline after fork condition");
         skip_newlines(p);
-        s->as.fork.then_block = parse_block_until(p, TOK_K_OTHERWISE, TOK_K_SEAL);
+        s->as.fork.then_block = parse_block_until_any(p, TOK_K_ELSEIF, TOK_K_OTHERWISE, TOK_K_SEAL);
+
+        Stmt *tail = s;
+        while (match(p, TOK_K_ELSEIF)) {
+            const Token *elif_kw = prev(p);
+            Expr *elif_cond = parse_expr(p);
+            expect(p, TOK_NEWLINE, "expected newline after elseif condition");
+            skip_newlines(p);
+            Block *elif_then = parse_block_until_any(p, TOK_K_ELSEIF, TOK_K_OTHERWISE, TOK_K_SEAL);
+
+            Stmt *elif_stmt = stmt_new(STMT_FORK, elif_kw->line, elif_kw->col);
+            elif_stmt->as.fork.cond = elif_cond;
+            elif_stmt->as.fork.then_block = elif_then;
+
+            Block *else_wrapper = block_new();
+            stmt_array_push(&else_wrapper->stmts, elif_stmt);
+            tail->as.fork.else_block = else_wrapper;
+            tail = elif_stmt;
+        }
+
         if (match(p, TOK_K_OTHERWISE)) {
             expect(p, TOK_NEWLINE, "expected newline after otherwise");
             skip_newlines(p);
-            s->as.fork.else_block = parse_block_until(p, TOK_K_SEAL, TOK_K_SEAL);
+            tail->as.fork.else_block = parse_block_until_any(p, TOK_K_SEAL, TOK_K_SEAL, TOK_K_SEAL);
         }
         expect(p, TOK_K_SEAL, "expected seal to close fork");
         expect_line_end(p);
@@ -300,8 +342,20 @@ static Stmt *parse_stmt(Parser *p) {
         s->as.cycle.cond = parse_expr(p);
         expect(p, TOK_NEWLINE, "expected newline after cycle condition");
         skip_newlines(p);
-        s->as.cycle.body = parse_block_until(p, TOK_K_SEAL, TOK_K_SEAL);
+        s->as.cycle.body = parse_block_until_any(p, TOK_K_SEAL, TOK_K_SEAL, TOK_K_SEAL);
         expect(p, TOK_K_SEAL, "expected seal to close cycle");
+        expect_line_end(p);
+        return s;
+    }
+
+    if (match(p, TOK_K_BREAK)) {
+        Stmt *s = stmt_new(STMT_BREAK, t->line, t->col);
+        expect_line_end(p);
+        return s;
+    }
+
+    if (match(p, TOK_K_CONTINUE)) {
+        Stmt *s = stmt_new(STMT_CONTINUE, t->line, t->col);
         expect_line_end(p);
         return s;
     }
@@ -331,9 +385,9 @@ static Stmt *parse_stmt(Parser *p) {
     return s;
 }
 
-static Block *parse_block_until(Parser *p, TokenKind end_a, TokenKind end_b) {
+static Block *parse_block_until_any(Parser *p, TokenKind end_a, TokenKind end_b, TokenKind end_c) {
     Block *block = block_new();
-    while (!check(p, TOK_EOF) && !check(p, end_a) && !check(p, end_b)) {
+    while (!check(p, TOK_EOF) && !check(p, end_a) && !check(p, end_b) && !check(p, end_c)) {
         if (match(p, TOK_NEWLINE)) {
             continue;
         }
@@ -377,7 +431,7 @@ static Function parse_function(Parser *p) {
     expect(p, TOK_NEWLINE, "expected newline after function signature");
     skip_newlines(p);
 
-    fn.body = parse_block_until(p, TOK_K_SEAL, TOK_K_SEAL);
+    fn.body = parse_block_until_any(p, TOK_K_SEAL, TOK_K_SEAL, TOK_K_SEAL);
     expect(p, TOK_K_SEAL, "expected seal to close function");
     expect_line_end(p);
 

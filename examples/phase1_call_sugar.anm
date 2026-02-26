@@ -1,0 +1,9 @@
+glyph add [a: ember, b: ember] yields ember
+offer a + b
+seal
+
+glyph main [] yields ember
+bind x = add(3, 4)
+chant x
+offer 0
+seal

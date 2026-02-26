@@ -65,8 +65,11 @@ static TokenKind keyword_kind(const char *s) {
     if (strcmp(s, "morph") == 0) return TOK_K_MORPH;
     if (strcmp(s, "shift") == 0) return TOK_K_SHIFT;
     if (strcmp(s, "fork") == 0) return TOK_K_FORK;
+    if (strcmp(s, "elseif") == 0) return TOK_K_ELSEIF;
     if (strcmp(s, "otherwise") == 0) return TOK_K_OTHERWISE;
     if (strcmp(s, "cycle") == 0) return TOK_K_CYCLE;
+    if (strcmp(s, "break") == 0) return TOK_K_BREAK;
+    if (strcmp(s, "continue") == 0) return TOK_K_CONTINUE;
     if (strcmp(s, "offer") == 0) return TOK_K_OFFER;
     if (strcmp(s, "invoke") == 0) return TOK_K_INVOKE;
     if (strcmp(s, "with") == 0) return TOK_K_WITH;
@@ -148,15 +151,36 @@ static void lex_string(Lexer *lx, int line, int col) {
             if (esc == '\0') {
                 fatal_at(lx->file, line, col, "unterminated string escape");
             }
-            bump(lx);
-            switch (esc) {
-                case 'n': c = '\n'; break;
-                case 't': c = '\t'; break;
-                case 'r': c = '\r'; break;
-                case '"': c = '"'; break;
-                case '\\': c = '\\'; break;
-                default:
-                    fatal_at(lx->file, line, col, "unsupported escape sequence \\%c", esc);
+            if (esc == 'x') {
+                bump(lx);
+                char h1 = peek(lx);
+                if (!isxdigit((unsigned char)h1)) {
+                    fatal_at(lx->file, line, col, "invalid hex escape, expected two hex digits after \\x");
+                }
+                bump(lx);
+                char h2 = peek(lx);
+                if (!isxdigit((unsigned char)h2)) {
+                    fatal_at(lx->file, line, col, "invalid hex escape, expected two hex digits after \\x");
+                }
+                bump(lx);
+                int v1 = isdigit((unsigned char)h1) ? (h1 - '0') : (tolower((unsigned char)h1) - 'a' + 10);
+                int v2 = isdigit((unsigned char)h2) ? (h2 - '0') : (tolower((unsigned char)h2) - 'a' + 10);
+                c = (char)((v1 << 4) | v2);
+            } else {
+                bump(lx);
+                switch (esc) {
+                    case 'n': c = '\n'; break;
+                    case 't': c = '\t'; break;
+                    case 'r': c = '\r'; break;
+                    case '0': c = '\0'; break;
+                    case 'b': c = '\b'; break;
+                    case 'f': c = '\f'; break;
+                    case 'v': c = '\v'; break;
+                    case '"': c = '"'; break;
+                    case '\\': c = '\\'; break;
+                    default:
+                        fatal_at(lx->file, line, col, "unsupported escape sequence \\%c", esc);
+                }
             }
         } else {
             bump(lx);
@@ -234,6 +258,8 @@ void lex_source(const char *file, const char *src, TokenArray *out_tokens) {
             case ':': bump(&lx); emit_simple(&lx, TOK_COLON, line, col); break;
             case '[': bump(&lx); emit_simple(&lx, TOK_LBRACKET, line, col); break;
             case ']': bump(&lx); emit_simple(&lx, TOK_RBRACKET, line, col); break;
+            case '(': bump(&lx); emit_simple(&lx, TOK_LPAREN, line, col); break;
+            case ')': bump(&lx); emit_simple(&lx, TOK_RPAREN, line, col); break;
             default:
                 fatal_at(file, line, col, "unexpected character '%c'", c);
         }
@@ -272,14 +298,19 @@ const char *token_kind_name(TokenKind kind) {
         case TOK_COLON: return ":";
         case TOK_LBRACKET: return "[";
         case TOK_RBRACKET: return "]";
+        case TOK_LPAREN: return "(";
+        case TOK_RPAREN: return ")";
         case TOK_K_GLYPH: return "glyph";
         case TOK_K_YIELDS: return "yields";
         case TOK_K_BIND: return "bind";
         case TOK_K_MORPH: return "morph";
         case TOK_K_SHIFT: return "shift";
         case TOK_K_FORK: return "fork";
+        case TOK_K_ELSEIF: return "elseif";
         case TOK_K_OTHERWISE: return "otherwise";
         case TOK_K_CYCLE: return "cycle";
+        case TOK_K_BREAK: return "break";
+        case TOK_K_CONTINUE: return "continue";
         case TOK_K_OFFER: return "offer";
         case TOK_K_INVOKE: return "invoke";
         case TOK_K_WITH: return "with";
