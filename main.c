@@ -4,6 +4,7 @@
 #include "lexer.h"
 #include "parser.h"
 #include "semantic.h"
+#include "target.h"
 #include "update.h"
 #include "utils.h"
 
@@ -65,6 +66,7 @@ static void usage(void) {
             "anemo run <file.anm>\n"
             "anemo vortex\n"
             "anemo update\n"
+            "anemo targets\n"
             "anemo version\n");
 }
 
@@ -387,6 +389,11 @@ int main(int argc, char **argv) {
 
     if (strcmp(argv[1], "version") == 0) {
         printf("anemo %s\n", ANEMO_VERSION);
+        return 0;
+    }
+
+    if (strcmp(argv[1], "targets") == 0) {
+        anemo_target_print_profiles(stdout);
         return 0;
     }
 
