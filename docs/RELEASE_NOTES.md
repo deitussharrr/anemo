@@ -1,7 +1,7 @@
 # Anemo 0.2.0
 
-**Release type:** Development / prototype release  
-**Status:** Experimental  
+**Release type:** Development / prototype release
+**Status:** Experimental
 **Date:** October 2026
 
 ## Overview
