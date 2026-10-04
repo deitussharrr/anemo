@@ -12,13 +12,20 @@ printf '%s\n' "$targets" | grep -F "linux-arm64" >/dev/null
 printf '%s\n' "$targets" | grep -F "linux-x86_64" >/dev/null
 printf '%s\n' "$targets" | grep -F "windows-x86_64" >/dev/null
 printf '%s\n' "$targets" | grep -F "macos-arm64" >/dev/null
+printf '%s\n' "$targets" | grep -F "linux-x86_64" | grep -F "[prototype]" >/dev/null
+printf '%s\n' "$targets" | grep -F "android-arm64" | grep -F "[planned]" >/dev/null
 
-"$ANEMO" build "$ROOT/examples/hello.anm" >/dev/null
+"$ANEMO" build --target linux-x86_64 "$ROOT/examples/hello.anm" >/dev/null
 binary="$ROOT/examples/hello"
 trap 'rm -rf "$TMP_DIR" "$binary" "$ROOT/examples/hello.s" "$ROOT/examples/hello.o"' EXIT
 
 output=$("$binary")
 printf '%s\n' "$output" | grep -F "anemo says hello" >/dev/null
+
+if "$ANEMO" build --target android-arm64 "$ROOT/examples/hello.anm" >/dev/null 2>&1; then
+    printf '%s\n' "planned target unexpectedly built" >&2
+    exit 1
+fi
 
 version=$("$ANEMO" version)
 printf '%s\n' "$version" | grep -F "anemo 0.2.0" >/dev/null

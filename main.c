@@ -62,8 +62,8 @@ static void print_ascii_art(void) {
 static void usage(void) {
     printf(
             "Available commands:\n"
-            "anemo build <file.anm>\n"
-            "anemo run <file.anm>\n"
+            "anemo build [--target <profile>] <file.anm>\n"
+            "anemo run [--target <profile>] <file.anm>\n"
             "anemo vortex\n"
             "anemo update\n"
             "anemo targets\n"
@@ -326,6 +326,18 @@ static void run_vortex(const char *self_path) {
     free(buffer);
 }
 
+static const char *parse_build_arguments(int argc, char **argv, const char **source) {
+    if (argc == 3) {
+        *source = argv[2];
+        return "linux-x86_64";
+    }
+    if (argc == 5 && strcmp(argv[2], "--target") == 0) {
+        *source = argv[4];
+        return argv[3];
+    }
+    return NULL;
+}
+
 static void compile_source(const char *input_path, const char *binary_out) {
     if (!has_extension(input_path, ".anm")) {
         fatal("input file must use .anm extension");
@@ -406,8 +418,26 @@ int main(int argc, char **argv) {
         return anemo_run_update(ANEMO_VERSION);
     }
 
-    if ((strcmp(argv[1], "build") == 0 || strcmp(argv[1], "run") == 0) && argc == 3) {
-        const char *src = argv[2];
+    if (strcmp(argv[1], "build") == 0 || strcmp(argv[1], "run") == 0) {
+        const char *src = NULL;
+        const char *target_name = parse_build_arguments(argc, argv, &src);
+        if (!target_name) {
+            usage();
+            return 1;
+        }
+        const AnemoTargetProfile *target = anemo_target_find(target_name);
+        if (!target) {
+            fprintf(stderr, "error: unknown target profile '%s'\n", target_name);
+            anemo_target_print_profiles(stderr);
+            return 1;
+        }
+        if (!target->backend_available) {
+            fprintf(stderr,
+                    "error: target '%s' is planned but its native backend is not available yet\n",
+                    target->name);
+            fprintf(stderr, "hint: use --target linux-x86_64 for the current prototype backend\n");
+            return 1;
+        }
         char *stem = path_stem(src);
 
         compile_source(src, stem);

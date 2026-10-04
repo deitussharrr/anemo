@@ -15,9 +15,10 @@ The initial target matrix is:
 Additional planned profiles include iOS ARM64, macOS x86-64, Windows ARM64,
 Linux RISC-V, and WebAssembly.
 
-`anemo targets` lists profile metadata. A profile is not considered supported
-until its backend, runtime adapter, packaging flow, and release validation are
-implemented.
+`anemo targets` lists profile metadata and backend status. Only the
+`linux-x86_64` profile currently has a prototype backend. A profile is not
+considered supported until its backend, runtime adapter, packaging flow, and
+release validation are implemented.
 
 ## One source, multiple artifacts
 

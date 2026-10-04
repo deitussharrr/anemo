@@ -11,6 +11,7 @@ toward the Anemo universal application platform.
 - `glyph`, `bind`, `morph`, `fork`, `cycle`, `offer`, and `chant` syntax
 - Vortex interactive shell
 - `anemo targets` target-profile discovery command
+- explicit `--target` validation with clear planned-backend diagnostics
 - target metadata for Android ARM64, Linux ARM64/x86-64, Windows x86-64, and
   macOS Apple Silicon
 - reproducible CI build and prototype smoke-test gate

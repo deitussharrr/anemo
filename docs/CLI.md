@@ -3,8 +3,8 @@
 ## Current commands
 
 ```text
-anemo build <file.anm>
-anemo run <file.anm>
+anemo build [--target <profile>] <file.anm>
+anemo run [--target <profile>] <file.anm>
 anemo vortex
 anemo update
 anemo targets
@@ -12,8 +12,9 @@ anemo version
 ```
 
 The current `build` and `run` commands invoke the prototype x86-64 assembly
-pipeline. `targets` exposes target-profile metadata and does not yet compile
-for those profiles.
+pipeline. Without `--target`, they use the current `linux-x86_64` profile.
+`targets` exposes target-profile metadata. Planned profiles are rejected
+explicitly instead of being compiled with the wrong backend.
 
 ## Planned project workflow
 
@@ -42,6 +43,9 @@ anemo package --all
 `--target` must be explicit in CI or derived from a configured project target
 set. `--all` builds every configured target and reports failures per target.
 It must never silently skip a target.
+
+At the current prototype stage, only `linux-x86_64` is buildable. The other
+profiles are visible for planning and fail with an actionable diagnostic.
 
 ## Diagnostics
 

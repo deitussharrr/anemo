@@ -120,5 +120,6 @@ compilation, explicit capability checks, and generated native packages.
 - Unsupported required capabilities fail during build or produce an explicit
   runtime diagnostic; they must not silently become no-ops.
 - Every release target is compiled and tested independently.
-- Target profiles shown by `anemo targets` are planning metadata until their
-  backend and packaging toolchain are implemented.
+-   Target profiles shown by `anemo targets` include backend status. Only
+  `linux-x86_64` currently has a prototype backend; all other profiles remain
+  planned until their backend and packaging toolchain are implemented.

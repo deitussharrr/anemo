@@ -101,6 +101,7 @@ Implementation, platform, and release documentation:
 
 ```bash
 ./anemo build program.anm
+./anemo build --target linux-x86_64 program.anm
 ./anemo run program.anm
 ./anemo vortex
 ./anemo update
@@ -111,9 +112,9 @@ Implementation, platform, and release documentation:
 Running `anemo` with no arguments prints ASCII art and shows available commands.
 
 The current `build` and `run` commands target the prototype x86-64 Linux
-backend. Target profiles shown by `anemo targets` are planning metadata until
-their compiler backend, runtime adapter, packaging flow, and release tests are
-implemented.
+backend. Use `--target` to select a profile explicitly. `linux-x86_64` is the
+only buildable profile today; other profiles are rejected until their compiler
+backend, runtime adapter, packaging flow, and release tests are implemented.
 
 ## OTA Updates
 
