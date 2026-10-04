@@ -136,7 +136,11 @@ Linux/MinGW:
 
 ```bash
 make
+make check
 ```
+
+`make check` builds the compiler and runs the repository smoke checks. The CI
+workflow runs the same gate on every pull request and push to `main`.
 
 Windows (MSYS2 MinGW GCC example):
 

@@ -1,0 +1,32 @@
+name: Anemo CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  build-and-check:
+    name: Build and smoke test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Build compiler
+        run: make
+
+      - name: Run smoke checks
+        run: make check
+
+      - name: Verify documentation links and whitespace
+        shell: bash
+        run: |
+          test -f README.md
+          test -f docs/README.md
+          test -f docs/RELEASE.md
+          git diff --check

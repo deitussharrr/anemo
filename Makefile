@@ -8,6 +8,9 @@ all: anemo
 anemo: $(OBJS)
 	$(CC) $(CFLAGS) -o anemo $(OBJS)
 
+check: anemo
+	./tests/smoke.sh ./anemo
+
 main.o: main.c lexer.h parser.h ast.h semantic.h ir.h codegen.h target.h utils.h
 lexer.o: lexer.c lexer.h utils.h
 parser.o: parser.c parser.h ast.h lexer.h utils.h
@@ -22,4 +25,4 @@ target.o: target.c target.h
 clean:
 	rm -f $(OBJS) anemo
 
-.PHONY: all clean
+.PHONY: all check clean

@@ -13,6 +13,7 @@ toward the Anemo universal application platform.
 - `anemo targets` target-profile discovery command
 - target metadata for Android ARM64, Linux ARM64/x86-64, Windows x86-64, and
   macOS Apple Silicon
+- reproducible CI build and prototype smoke-test gate
 - semantic application model documentation
 - language, type, memory, concurrency, MIR, UI, architecture, runtime,
   platform, CLI, security, testing, tooling, roadmap, and release contracts
@@ -38,6 +39,9 @@ and is not accepted by the current parser.
 - assembly and linking require the host toolchain
 - target profiles are metadata only
 - platform permissions, signing, and distribution are not automated
+
+The CI gate validates the current prototype compiler only. It is not a
+cross-platform release certification.
 
 ## Upgrade guidance
 

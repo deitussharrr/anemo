@@ -11,7 +11,7 @@ version or an explicitly named language edition.
 Before publishing:
 
 1. update version and release notes
-2. run formatting, compiler, semantic, and documentation checks
+2. run formatting, compiler, semantic, documentation, and `make check` checks
 3. build every claimed target profile
 4. run target smoke tests and package validation
 5. generate debug symbols and source metadata
@@ -39,6 +39,10 @@ dist/<version>/
 Only implemented and validated targets may appear as supported release
 artifacts. Planned profiles remain visible as planned, never as empty or
 placeholder downloads.
+
+The repository CI gate currently validates only the prototype x86-64 Linux
+compiler. It does not certify Android, Apple, Windows, ARM64, RISC-V, or Web
+artifacts.
 
 ## Reproducibility
 
