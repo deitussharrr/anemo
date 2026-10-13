@@ -7,6 +7,10 @@
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
+#ifndef _WIN32
+#include <errno.h>
+#include <sys/stat.h>
+#endif
 
 #ifdef _WIN32
 #include <direct.h>
@@ -20,6 +24,21 @@ static const char *default_repo(void) {
         return repo;
     }
     return "tussh/anemo";
+}
+
+static int valid_repo(const char *repo) {
+    const char *slash = strchr(repo, '/');
+    if (!slash || slash == repo || strchr(slash + 1, '/')) return 0;
+    for (const char *p = repo; *p; p++) {
+        if (p == slash) continue;
+        if (!isalnum((unsigned char)*p) && *p != '-' && *p != '_' && *p != '.') return 0;
+    }
+    return slash[1] != '\0';
+}
+
+static int command_snprintf(char *dst, size_t cap, const char *fmt, const char *value) {
+    int n = snprintf(dst, cap, fmt, value);
+    return n >= 0 && (size_t)n < cap;
 }
 
 static void copy_trimmed(char *dst, size_t dst_cap, const char *src) {
@@ -111,21 +130,25 @@ static int read_cmd_output_line(const char *cmd, char *out, size_t out_cap) {
 
 static int fetch_latest_tag(char *out_tag, size_t out_cap) {
     const char *repo = default_repo();
+    if (!valid_repo(repo)) {
+        fprintf(stderr, "error: ANEMO_GITHUB_REPO must be an owner/name repository\n");
+        return 0;
+    }
     char cmd[4096];
 #ifdef _WIN32
-    snprintf(cmd, sizeof(cmd),
+    if (!command_snprintf(cmd, sizeof(cmd),
              "powershell -NoProfile -ExecutionPolicy Bypass -Command "
              "\"$ProgressPreference='SilentlyContinue';"
              "$u='https://api.github.com/repos/%s/releases/latest';"
              "try{$r=Invoke-RestMethod -UseBasicParsing -Uri $u -Headers @{\\\"User-Agent\\\"='anemo'};"
              "if($r.tag_name){[Console]::Out.Write($r.tag_name)}}catch{}\"",
-             repo);
+             repo)) return 0;
 #else
-    snprintf(cmd, sizeof(cmd),
+    if (!command_snprintf(cmd, sizeof(cmd),
              "sh -lc \"curl -fsSL -H 'User-Agent: anemo' "
              "https://api.github.com/repos/%s/releases/latest "
              "| sed -n 's/.*\\\"tag_name\\\"[[:space:]]*:[[:space:]]*\\\"\\([^\\\"]*\\)\\\".*/\\1/p' | head -n1\"",
-             repo);
+             repo)) return 0;
 #endif
     return read_cmd_output_line(cmd, out_tag, out_cap);
 }
@@ -135,8 +158,7 @@ static int ensure_dir(const char *path) {
     int rc = _mkdir(path);
     return rc == 0 || rc == -1;
 #else
-    (void)path;
-    return 1;
+    return mkdir(path, 0700) == 0 || errno == EEXIST;
 #endif
 }
 
@@ -153,11 +175,13 @@ static int should_check_now(void) {
     }
     char dir[1024];
     char cache[1200];
-    snprintf(dir, sizeof(dir), "%s\\Anemo", local);
+    if (snprintf(dir, sizeof(dir), "%s\\Anemo", local) < 0 ||
+        (size_t)snprintf(dir, sizeof(dir), "%s\\Anemo", local) >= sizeof(dir)) return 1;
     if (!ensure_dir(dir)) {
         return 1;
     }
-    snprintf(cache, sizeof(cache), "%s\\update_check.txt", dir);
+    if (snprintf(cache, sizeof(cache), "%s\\update_check.txt", dir) < 0 ||
+        (size_t)snprintf(cache, sizeof(cache), "%s\\update_check.txt", dir) >= sizeof(cache)) return 1;
     FILE *f = fopen(cache, "rb");
     if (!f) {
         return 1;
@@ -171,7 +195,26 @@ static int should_check_now(void) {
     long now = (long)time(NULL);
     return (now - last) >= 86400;
 #else
-    return 1;
+    const char *base = getenv("XDG_CACHE_HOME");
+    const char *home = getenv("HOME");
+    char dir[1024];
+    char cache[1200];
+    if (base && *base) {
+        if (snprintf(dir, sizeof(dir), "%s/anemo", base) < 0 ||
+            (size_t)snprintf(dir, sizeof(dir), "%s/anemo", base) >= sizeof(dir)) return 1;
+    } else if (home && *home) {
+        if (snprintf(dir, sizeof(dir), "%s/.cache/anemo", home) < 0 ||
+            (size_t)snprintf(dir, sizeof(dir), "%s/.cache/anemo", home) >= sizeof(dir)) return 1;
+    } else return 1;
+    if (!ensure_dir(dir)) return 1;
+    if (snprintf(cache, sizeof(cache), "%s/update_check.txt", dir) < 0 ||
+        (size_t)snprintf(cache, sizeof(cache), "%s/update_check.txt", dir) >= sizeof(cache)) return 1;
+    FILE *f = fopen(cache, "rb");
+    if (!f) return 1;
+    long last = 0;
+    int ok = fscanf(f, "%ld", &last) == 1;
+    fclose(f);
+    return !ok || (long)time(NULL) - last >= 86400;
 #endif
 }
 
@@ -183,15 +226,36 @@ static void mark_checked_now(void) {
     }
     char dir[1024];
     char cache[1200];
-    snprintf(dir, sizeof(dir), "%s\\Anemo", local);
+    if (snprintf(dir, sizeof(dir), "%s\\Anemo", local) < 0 ||
+        (size_t)snprintf(dir, sizeof(dir), "%s\\Anemo", local) >= sizeof(dir)) return;
     if (!ensure_dir(dir)) {
         return;
     }
-    snprintf(cache, sizeof(cache), "%s\\update_check.txt", dir);
+    if (snprintf(cache, sizeof(cache), "%s\\update_check.txt", dir) < 0 ||
+        (size_t)snprintf(cache, sizeof(cache), "%s\\update_check.txt", dir) >= sizeof(cache)) return;
     FILE *f = fopen(cache, "wb");
     if (!f) {
         return;
     }
+    fprintf(f, "%ld\n", (long)time(NULL));
+    fclose(f);
+#else
+    const char *base = getenv("XDG_CACHE_HOME");
+    const char *home = getenv("HOME");
+    char dir[1024];
+    char cache[1200];
+    if (base && *base) {
+        if (snprintf(dir, sizeof(dir), "%s/anemo", base) < 0 ||
+            (size_t)snprintf(dir, sizeof(dir), "%s/anemo", base) >= sizeof(dir)) return;
+    } else if (home && *home) {
+        if (snprintf(dir, sizeof(dir), "%s/.cache/anemo", home) < 0 ||
+            (size_t)snprintf(dir, sizeof(dir), "%s/.cache/anemo", home) >= sizeof(dir)) return;
+    } else return;
+    if (!ensure_dir(dir)) return;
+    if (snprintf(cache, sizeof(cache), "%s/update_check.txt", dir) < 0 ||
+        (size_t)snprintf(cache, sizeof(cache), "%s/update_check.txt", dir) >= sizeof(cache)) return;
+    FILE *f = fopen(cache, "wb");
+    if (!f) return;
     fprintf(f, "%ld\n", (long)time(NULL));
     fclose(f);
 #endif
@@ -229,7 +293,7 @@ int anemo_run_update(const char *current_version) {
 #ifdef _WIN32
     const char *repo = default_repo();
     char cmd[8192];
-    snprintf(cmd, sizeof(cmd),
+    if (!command_snprintf(cmd, sizeof(cmd),
              "powershell -NoProfile -ExecutionPolicy Bypass -Command "
              "\"$ProgressPreference='SilentlyContinue';"
              "$repo='%s';"
@@ -240,7 +304,10 @@ int anemo_run_update(const char *current_version) {
              "Invoke-WebRequest -UseBasicParsing -Uri $asset.browser_download_url -OutFile $out;"
              "Write-Host ('Downloaded: '+$out);"
              "Start-Process msiexec -ArgumentList ('/i `\"'+$out+'`\"') -Wait\"",
-             repo);
+             repo)) {
+        fprintf(stderr, "error: update command is too long\n");
+        return 1;
+    }
 
     int rc = system(cmd);
     if (rc != 0) {

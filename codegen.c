@@ -104,61 +104,61 @@ static void store_temp(FILE *out, const IRFunction *fn, int temp, const char *re
 
 static void emit_binop(FILE *out, const IRFunction *fn, const IRInstr *in) {
     load_temp(out, fn, in->src1, "%rax");
-    load_temp(out, fn, in->src2, "%rbx");
+    load_temp(out, fn, in->src2, "%r10");
 
     switch (in->binop) {
         case IRBIN_ADD:
-            fprintf(out, "  addq %%rbx, %%rax\n");
+            fprintf(out, "  addq %%r10, %%rax\n");
             break;
         case IRBIN_SUB:
-            fprintf(out, "  subq %%rbx, %%rax\n");
+            fprintf(out, "  subq %%r10, %%rax\n");
             break;
         case IRBIN_MUL:
-            fprintf(out, "  imulq %%rbx, %%rax\n");
+            fprintf(out, "  imulq %%r10, %%rax\n");
             break;
         case IRBIN_DIV:
             fprintf(out, "  cqto\n");
-            fprintf(out, "  idivq %%rbx\n");
+            fprintf(out, "  idivq %%r10\n");
             break;
         case IRBIN_BOTH:
-            fprintf(out, "  andq %%rbx, %%rax\n");
+            fprintf(out, "  andq %%r10, %%rax\n");
             fprintf(out, "  cmpq $0, %%rax\n");
             fprintf(out, "  setne %%al\n");
             fprintf(out, "  movzbq %%al, %%rax\n");
             break;
         case IRBIN_EITHER:
-            fprintf(out, "  orq %%rbx, %%rax\n");
+            fprintf(out, "  orq %%r10, %%rax\n");
             fprintf(out, "  cmpq $0, %%rax\n");
             fprintf(out, "  setne %%al\n");
             fprintf(out, "  movzbq %%al, %%rax\n");
             break;
         case IRBIN_SAME:
-            fprintf(out, "  cmpq %%rbx, %%rax\n");
+            fprintf(out, "  cmpq %%r10, %%rax\n");
             fprintf(out, "  sete %%al\n");
             fprintf(out, "  movzbq %%al, %%rax\n");
             break;
         case IRBIN_DIFF:
-            fprintf(out, "  cmpq %%rbx, %%rax\n");
+            fprintf(out, "  cmpq %%r10, %%rax\n");
             fprintf(out, "  setne %%al\n");
             fprintf(out, "  movzbq %%al, %%rax\n");
             break;
         case IRBIN_LESS:
-            fprintf(out, "  cmpq %%rbx, %%rax\n");
+            fprintf(out, "  cmpq %%r10, %%rax\n");
             fprintf(out, "  setl %%al\n");
             fprintf(out, "  movzbq %%al, %%rax\n");
             break;
         case IRBIN_MORE:
-            fprintf(out, "  cmpq %%rbx, %%rax\n");
+            fprintf(out, "  cmpq %%r10, %%rax\n");
             fprintf(out, "  setg %%al\n");
             fprintf(out, "  movzbq %%al, %%rax\n");
             break;
         case IRBIN_ATMOST:
-            fprintf(out, "  cmpq %%rbx, %%rax\n");
+            fprintf(out, "  cmpq %%r10, %%rax\n");
             fprintf(out, "  setle %%al\n");
             fprintf(out, "  movzbq %%al, %%rax\n");
             break;
         case IRBIN_ATLEAST:
-            fprintf(out, "  cmpq %%rbx, %%rax\n");
+            fprintf(out, "  cmpq %%r10, %%rax\n");
             fprintf(out, "  setge %%al\n");
             fprintf(out, "  movzbq %%al, %%rax\n");
             break;
@@ -213,12 +213,16 @@ static void emit_chant(FILE *out, const IRFunction *fn, const IRInstr *in) {
         fprintf(out, "  movq %%rax, %%rsi\n");
         fprintf(out, "  leaq .LC_fmt_int(%%rip), %%rdi\n");
         fprintf(out, "  xor %%eax, %%eax\n");
+        fprintf(out, "  subq $8, %%rsp\n");
         fprintf(out, "  call %s\n", printf_symbol());
+        fprintf(out, "  addq $8, %%rsp\n");
     } else if (in->type == TYPE_STRING) {
         fprintf(out, "  movq %%rax, %%rsi\n");
         fprintf(out, "  leaq .LC_fmt_str(%%rip), %%rdi\n");
         fprintf(out, "  xor %%eax, %%eax\n");
+        fprintf(out, "  subq $8, %%rsp\n");
         fprintf(out, "  call %s\n", printf_symbol());
+        fprintf(out, "  addq $8, %%rsp\n");
     } else {
         fprintf(out, "  cmpq $0, %%rax\n");
         fprintf(out, "  leaq .LC_bool_no(%%rip), %%rsi\n");
@@ -226,7 +230,9 @@ static void emit_chant(FILE *out, const IRFunction *fn, const IRInstr *in) {
         fprintf(out, "  cmovne %%rdx, %%rsi\n");
         fprintf(out, "  leaq .LC_fmt_str(%%rip), %%rdi\n");
         fprintf(out, "  xor %%eax, %%eax\n");
+        fprintf(out, "  subq $8, %%rsp\n");
         fprintf(out, "  call %s\n", printf_symbol());
+        fprintf(out, "  addq $8, %%rsp\n");
     }
 #endif
 }
@@ -239,9 +245,12 @@ static void emit_function(FILE *out, const IRFunction *fn) {
 
     int slots = (int)fn->vars.len + fn->temp_count;
     int stack_size = slots * 8;
-    if (stack_size % 16 != 0) {
-        stack_size += 8;
-    }
+#ifdef _WIN32
+    if (stack_size % 16 != 0) stack_size += 8;
+#else
+    if (stack_size % 16 == 0) stack_size += 8;
+    else if (stack_size % 16 != 8) stack_size += 16 - (stack_size % 16) + 8;
+#endif
 
     fprintf(out, "  pushq %%rbp\n");
     fprintf(out, "  movq %%rsp, %%rbp\n");
@@ -307,9 +316,13 @@ static void emit_function(FILE *out, const IRFunction *fn) {
                 for (int a = 0; a < in->argc; a++) {
                     load_temp(out, fn, in->args[a], arg_reg64(a));
                 }
+#ifdef _WIN32
                 fprintf(out, "  subq $32, %%rsp\n");
+#endif
                 fprintf(out, "  call %s\n", label_for_fn(in->name));
+#ifdef _WIN32
                 fprintf(out, "  addq $32, %%rsp\n");
+#endif
                 if (in->dst >= 0) {
                     store_temp(out, fn, in->dst, "%rax");
                 }

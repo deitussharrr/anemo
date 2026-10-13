@@ -16,6 +16,10 @@ pipeline. Without `--target`, they use the current `linux-x86_64` profile.
 `targets` exposes target-profile metadata. Planned profiles are rejected
 explicitly instead of being compiled with the wrong backend.
 
+Automatic release checks run at most once per day (stored under the platform
+cache directory) and can be disabled with `ANEMO_DISABLE_UPDATE_CHECK=1`.
+`ANEMO_GITHUB_REPO`, when set, must use the `owner/name` form.
+
 ## Planned project workflow
 
 ```text

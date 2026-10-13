@@ -1,6 +1,7 @@
 #include "utils.h"
 
 #include <errno.h>
+#include <stdint.h>
 #include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -15,6 +16,9 @@ void *xmalloc(size_t size) {
 }
 
 void *xcalloc(size_t count, size_t size) {
+    if (size != 0 && count > SIZE_MAX / size) {
+        fatal("allocation size overflow for %zu elements of %zu bytes", count, size);
+    }
     void *p = calloc(count, size);
     if (!p) {
         fatal("out of memory allocating %zu bytes", count * size);
@@ -80,6 +84,10 @@ char *read_file_all(const char *path, size_t *out_size) {
         fatal("cannot seek '%s'", path);
     }
 
+    if ((unsigned long long)size >= (unsigned long long)SIZE_MAX) {
+        fclose(f);
+        fatal("file '%s' is too large to load", path);
+    }
     char *buf = xmalloc((size_t)size + 1);
     size_t n = fread(buf, 1, (size_t)size, f);
     fclose(f);

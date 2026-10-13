@@ -3,6 +3,8 @@
 #include "utils.h"
 
 #include <ctype.h>
+#include <errno.h>
+#include <limits.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -105,7 +107,12 @@ static void lex_number(Lexer *lx, int line, int col) {
     Token t;
     t.kind = TOK_INT;
     t.lexeme = digits;
-    t.int_value = strtol(digits, NULL, 10);
+    char *end = NULL;
+    errno = 0;
+    t.int_value = strtol(digits, &end, 10);
+    if (errno == ERANGE || end == digits || *end != '\0' || t.int_value < LONG_MIN || t.int_value > LONG_MAX) {
+        fatal_at(lx->file, line, col, "integer literal out of range");
+    }
     t.line = line;
     t.col = col;
     token_push(&lx->out, t);
@@ -172,7 +179,10 @@ static void lex_string(Lexer *lx, int line, int col) {
                     case 'n': c = '\n'; break;
                     case 't': c = '\t'; break;
                     case 'r': c = '\r'; break;
-                    case '0': c = '\0'; break;
+                    case '0':
+                        fatal_at(lx->file, line, col,
+                                 "\\0 is not supported in strings; use text without embedded NUL bytes");
+                        break;
                     case 'b': c = '\b'; break;
                     case 'f': c = '\f'; break;
                     case 'v': c = '\v'; break;

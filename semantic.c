@@ -121,6 +121,12 @@ static void require_type(Checker *c, Expr *e, TypeKind got, TypeKind expected, c
     }
 }
 
+static void require_value(Checker *c, Expr *e, TypeKind got, const char *what) {
+    if (got == TYPE_VOID) {
+        fatal_at(c->file, e->line, e->col, "%s cannot use a mist glyph call as a value", what);
+    }
+}
+
 static TypeKind check_call(Checker *c, Expr *e) {
     FnSym *fn = find_fn(c, e->as.call.name);
     if (!fn) {
@@ -139,6 +145,7 @@ static TypeKind check_call(Checker *c, Expr *e) {
 
     for (size_t i = 0; i < e->as.call.args.len; i++) {
         TypeKind arg_t = check_expr(c, e->as.call.args.items[i]);
+        require_value(c, e->as.call.args.items[i], arg_t, "call argument");
         TypeKind exp_t = fn->params.items[i].type;
         if (arg_t != exp_t) {
             fatal_at(c->file,
@@ -180,6 +187,7 @@ static TypeKind check_expr(Checker *c, Expr *e) {
             break;
         case EXPR_UNARY: {
             TypeKind inner = check_expr(c, e->as.unary.operand);
+            require_value(c, e->as.unary.operand, inner, "unary operator");
             if (e->as.unary.op == UN_NEG) {
                 require_type(c, e->as.unary.operand, inner, TYPE_INT, "negation");
                 t = TYPE_INT;
@@ -192,6 +200,8 @@ static TypeKind check_expr(Checker *c, Expr *e) {
         case EXPR_BINARY: {
             TypeKind lt = check_expr(c, e->as.binary.left);
             TypeKind rt = check_expr(c, e->as.binary.right);
+            require_value(c, e->as.binary.left, lt, "binary operator");
+            require_value(c, e->as.binary.right, rt, "binary operator");
             switch (e->as.binary.op) {
                 case BIN_ADD:
                 case BIN_SUB:
@@ -239,11 +249,13 @@ static void check_stmt(Checker *c, Stmt *s) {
     switch (s->kind) {
         case STMT_BIND: {
             TypeKind t = check_expr(c, s->as.bind.value);
+            require_value(c, s->as.bind.value, t, "bind");
             define_var(c, s->as.bind.name, t, 0, s->line, s->col);
             break;
         }
         case STMT_MORPH: {
             TypeKind t = check_expr(c, s->as.morph.value);
+            require_value(c, s->as.morph.value, t, "morph");
             define_var(c, s->as.morph.name, t, 1, s->line, s->col);
             break;
         }
@@ -256,6 +268,7 @@ static void check_stmt(Checker *c, Stmt *s) {
                 fatal_at(c->file, s->line, s->col, "cannot shift immutable symbol '%s'", s->as.shift.name);
             }
             TypeKind t = check_expr(c, s->as.shift.value);
+            require_value(c, s->as.shift.value, t, "shift");
             if (t != v->type) {
                 fatal_at(c->file, s->line, s->col,
                          "shift type mismatch for '%s': expected %s, got %s",
@@ -265,6 +278,7 @@ static void check_stmt(Checker *c, Stmt *s) {
         }
         case STMT_FORK: {
             TypeKind cond = check_expr(c, s->as.fork.cond);
+            require_value(c, s->as.fork.cond, cond, "fork condition");
             if (cond != TYPE_BOOL) {
                 fatal_at(c->file, s->line, s->col, "fork condition must be pulse");
             }
@@ -281,6 +295,7 @@ static void check_stmt(Checker *c, Stmt *s) {
         }
         case STMT_CYCLE: {
             TypeKind cond = check_expr(c, s->as.cycle.cond);
+            require_value(c, s->as.cycle.cond, cond, "cycle condition");
             if (cond != TYPE_BOOL) {
                 fatal_at(c->file, s->line, s->col, "cycle condition must be pulse");
             }
@@ -314,6 +329,7 @@ static void check_stmt(Checker *c, Stmt *s) {
                     fatal_at(c->file, s->line, s->col, "glyph must offer %s value", type_name(c->current_fn->ret));
                 }
                 TypeKind t = check_expr(c, s->as.offer.value);
+                require_value(c, s->as.offer.value, t, "offer");
                 if (t != c->current_fn->ret) {
                     fatal_at(c->file, s->line, s->col,
                              "offer mismatch: glyph yields %s but offered %s",
@@ -324,6 +340,7 @@ static void check_stmt(Checker *c, Stmt *s) {
         }
         case STMT_CHANT: {
             TypeKind t = check_expr(c, s->as.chant.value);
+            require_value(c, s->as.chant.value, t, "chant");
             if (t != TYPE_INT && t != TYPE_BOOL && t != TYPE_STRING) {
                 fatal_at(c->file, s->line, s->col, "chant supports ember|pulse|text");
             }

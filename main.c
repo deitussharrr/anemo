@@ -9,10 +9,20 @@
 #include "utils.h"
 
 #include <stdio.h>
+#include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
 
 #define ANEMO_VERSION "0.2.0"
+
+static int safe_command_value(const char *s) {
+    for (; *s; s++) {
+        if (*s == '"' || *s == '\'' || *s == '&' || *s == '|' || *s == ';' ||
+            *s == '<' || *s == '>' || *s == '`' || *s == '$' ||
+            *s == '\r' || *s == '\n') return 0;
+    }
+    return 1;
+}
 
 static void print_ascii_art(void) {
     fputs(
@@ -104,6 +114,11 @@ static int load_file_all_text(const char *path, char **out_text) {
         fclose(f);
         return 0;
     }
+    if ((unsigned long long)size >= (unsigned long long)SIZE_MAX) {
+        fclose(f);
+        fprintf(stderr, "error: file '%s' is too large to load\n", path);
+        return 0;
+    }
     char *buf = xmalloc((size_t)size + 1);
     size_t n = fread(buf, 1, (size_t)size, f);
     fclose(f);
@@ -173,7 +188,12 @@ static void read_multiline_into(char **buffer, size_t *len, int append) {
 
 static int run_subcommand(const char *self_path, const char *verb, const char *file) {
     char cmd[2048];
-    snprintf(cmd, sizeof(cmd), "\"%s\" %s \"%s\"", self_path, verb, file);
+    if (!safe_command_value(self_path) || !safe_command_value(file) ||
+        snprintf(cmd, sizeof(cmd), "\"%s\" %s \"%s\"", self_path, verb, file) < 0 ||
+        (size_t)snprintf(cmd, sizeof(cmd), "\"%s\" %s \"%s\"", self_path, verb, file) >= sizeof(cmd)) {
+        fprintf(stderr, "error: command contains unsafe or oversized path\n");
+        return 1;
+    }
     return system(cmd);
 }
 
@@ -366,19 +386,31 @@ static void compile_source(const char *input_path, const char *binary_out) {
 
     char asm_path[512];
     char obj_path[512];
-    snprintf(asm_path, sizeof(asm_path), "%s.s", stem);
-    snprintf(obj_path, sizeof(obj_path), "%s.o", stem);
+    if (snprintf(asm_path, sizeof(asm_path), "%s.s", stem) < 0 ||
+        (size_t)snprintf(asm_path, sizeof(asm_path), "%s.s", stem) >= sizeof(asm_path) ||
+        snprintf(obj_path, sizeof(obj_path), "%s.o", stem) < 0 ||
+        (size_t)snprintf(obj_path, sizeof(obj_path), "%s.o", stem) >= sizeof(obj_path)) {
+        fatal("generated output path is too long");
+    }
 
     codegen_emit_assembly(&ir, asm_path);
 
     char cmd_as[1024];
-    snprintf(cmd_as, sizeof(cmd_as), "as -o \"%s\" \"%s\"", obj_path, asm_path);
+    if (!safe_command_value(obj_path) || !safe_command_value(asm_path) ||
+        snprintf(cmd_as, sizeof(cmd_as), "as -o \"%s\" \"%s\"", obj_path, asm_path) < 0 ||
+        (size_t)snprintf(cmd_as, sizeof(cmd_as), "as -o \"%s\" \"%s\"", obj_path, asm_path) >= sizeof(cmd_as)) {
+        fatal("assembler command contains unsafe or oversized path");
+    }
     if (system(cmd_as) != 0) {
         fatal("assembler failed: %s", cmd_as);
     }
 
     char cmd_link[1024];
-    snprintf(cmd_link, sizeof(cmd_link), "gcc -no-pie -o \"%s\" \"%s\"", binary_out, obj_path);
+    if (!safe_command_value(binary_out) || !safe_command_value(obj_path) ||
+        snprintf(cmd_link, sizeof(cmd_link), "gcc -no-pie -o \"%s\" \"%s\"", binary_out, obj_path) < 0 ||
+        (size_t)snprintf(cmd_link, sizeof(cmd_link), "gcc -no-pie -o \"%s\" \"%s\"", binary_out, obj_path) >= sizeof(cmd_link)) {
+        fatal("linker command contains unsafe or oversized path");
+    }
     if (system(cmd_link) != 0) {
         fatal("linker failed: %s", cmd_link);
     }
@@ -391,8 +423,6 @@ static void compile_source(const char *input_path, const char *binary_out) {
 }
 
 int main(int argc, char **argv) {
-    anemo_auto_check_for_updates(ANEMO_VERSION);
-
     if (argc < 2) {
         print_ascii_art();
         usage();
@@ -408,6 +438,8 @@ int main(int argc, char **argv) {
         anemo_target_print_profiles(stdout);
         return 0;
     }
+
+    anemo_auto_check_for_updates(ANEMO_VERSION);
 
     if (strcmp(argv[1], "vortex") == 0) {
         run_vortex(argv[0]);
@@ -447,9 +479,15 @@ int main(int argc, char **argv) {
         } else {
             char cmd_run[1024];
 #ifdef _WIN32
-            snprintf(cmd_run, sizeof(cmd_run), ".\\%s", stem);
+            if (snprintf(cmd_run, sizeof(cmd_run), ".\\%s", stem) < 0 ||
+                (size_t)snprintf(cmd_run, sizeof(cmd_run), ".\\%s", stem) >= sizeof(cmd_run)) {
+                fatal("run command is too long");
+            }
 #else
-            snprintf(cmd_run, sizeof(cmd_run), "./%s", stem);
+            if (snprintf(cmd_run, sizeof(cmd_run), "./%s", stem) < 0 ||
+                (size_t)snprintf(cmd_run, sizeof(cmd_run), "./%s", stem) >= sizeof(cmd_run)) {
+                fatal("run command is too long");
+            }
 #endif
             int rc = system(cmd_run);
             if (rc != 0) {

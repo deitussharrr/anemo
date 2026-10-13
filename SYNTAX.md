@@ -39,7 +39,6 @@ Supported string escapes:
 - `\n`
 - `\t`
 - `\r`
-- `\0`
 - `\b`
 - `\f`
 - `\v`

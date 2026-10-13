@@ -1,0 +1,8 @@
+glyph announce [] yields mist
+chant "hello"
+seal
+
+glyph main [] yields ember
+bind value = invoke announce
+offer 0
+seal

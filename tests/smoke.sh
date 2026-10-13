@@ -22,6 +22,16 @@ trap 'rm -rf "$TMP_DIR" "$binary" "$ROOT/examples/hello.s" "$ROOT/examples/hello
 output=$("$binary")
 printf '%s\n' "$output" | grep -F "anemo says hello" >/dev/null
 
+if "$ANEMO" build --target linux-x86_64 "$ROOT/examples/invalid_void_value.anm" >/dev/null 2>&1; then
+    printf '%s\n' "void call accepted as a value" >&2
+    exit 1
+fi
+
+if "$ANEMO" build --target linux-x86_64 "$ROOT/examples/invalid_integer.anm" >/dev/null 2>&1; then
+    printf '%s\n' "out-of-range integer accepted" >&2
+    exit 1
+fi
+
 if "$ANEMO" build --target android-arm64 "$ROOT/examples/hello.anm" >/dev/null 2>&1; then
     printf '%s\n' "planned target unexpectedly built" >&2
     exit 1
