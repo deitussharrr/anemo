@@ -29,4 +29,25 @@ jobs:
           test -f README.md
           test -f docs/README.md
           test -f docs/RELEASE.md
+          test -f docs/RELEASE_1.0_CHECKLIST.md
           git diff --check
+
+  strict-warnings:
+    name: Strict warning build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Build with strict warnings
+        run: make strict-warnings
+
+  sanitizers:
+    name: Address and undefined behavior sanitizers
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Build and run sanitizer checks
+        run: make sanitizers

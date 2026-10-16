@@ -44,6 +44,24 @@ The repository CI gate currently validates only the prototype x86-64 Linux
 compiler. It does not certify Android, Apple, Windows, ARM64, RISC-V, or Web
 artifacts.
 
+## Anemo 1.0 scope and status
+
+Anemo 1.0 is a future stable release, not the current 0.2.0 development
+release. Its deliberately limited scope is the implemented `.anm` language
+and CLI, stable diagnostics and interfaces, reproducible compiler builds, and
+the validated `linux-x86_64` native backend. A target profile is not a
+supported backend merely because it is listed by `anemo targets`.
+
+LLVM, WebAssembly, semantic application/UI syntax, an adaptive runtime,
+runtime ABI guarantees, and native Android, iOS, macOS, Windows, or ARM64
+packaging are outside this 1.0 scope. They require separate implementation
+and release validation before being considered for a later edition.
+
+The 1.0 gate must pass `make check`, `make strict-warnings`, and
+`make sanitizers`, in addition to the artifact, reproducibility, and security
+checks below. Until that gate is met, documentation and version output must
+continue to identify the project as development/prototype status.
+
 ## Reproducibility
 
 Release builds pin source revision, dependencies, SDKs, target triples, and

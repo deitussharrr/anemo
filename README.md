@@ -256,6 +256,20 @@ compiler, Vortex shell, target profile discovery, and the Anemo 2.0
 specification set. It does not yet include LLVM, WebAssembly, semantic `app`
 parsing, native mobile/desktop packaging, or the adaptive runtime.
 
+### Anemo 1.0 scope and status
+
+Anemo 1.0 is **not released** and no 1.0 compatibility promise is made by
+the current 0.2.0 development release. The focused 1.0 scope is a stable
+version of the implemented `.anm` language, compiler diagnostics, CLI, and
+native `linux-x86_64` backend, with reproducible builds and release checks.
+The other profiles shown by `anemo targets` remain metadata or planned work;
+they are not 1.0 backends.
+
+Universal application syntax, LLVM/WebAssembly output, adaptive UI, runtime
+ABI, and mobile/desktop packaging are explicitly outside this focused 1.0
+scope. They may be addressed in later language editions rather than being
+silently presented as 1.0 support.
+
 ## MSI Installer (Windows)
 
 Installer files are in [`installer/`](installer/):

@@ -29,6 +29,7 @@ architecture, and release planning.
 
 - [ROADMAP.md](ROADMAP.md): staged implementation milestones
 - [RELEASE.md](RELEASE.md): release process and artifact checklist
+- [RELEASE_1.0_CHECKLIST.md](RELEASE_1.0_CHECKLIST.md): stable-release exit gate
 - [RELEASE_NOTES.md](RELEASE_NOTES.md): current development release notes
 
 The prototype grammar remains in [../SYNTAX.md](../SYNTAX.md). Documents that
